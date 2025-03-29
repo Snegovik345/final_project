@@ -1,0 +1,4 @@
+1. pyTelegramBotAPI
+2. random
+3. pipenv
+4. requests
