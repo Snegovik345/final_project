@@ -1,70 +1,37 @@
-import telebot
-import random
-bot = telebot.TeleBot("7913215781:AAF37tQ3q1aI5KgBhnjIFhvmbDitvRByi40")
-
-eco_tips = [
-    "Выбирай цифровые книги и билеты",
-    "Покупай многоразовые батарейки",
-    "Выбирай велосипед или самокат вместо машины",
-    "Храни еду в стекле, а не в пластике",
-    "Выключай приборы из розетки",
-    "Используй LED-лампочки",
-    "Чини вещи вместо замены",
-    "Отдай старую технику на переработку",
-    "Замени пластиковые пакеты на многоразовые сумки",
-    "Сортируй мусор"
-]
-eco_challenge = [
-    "День без пластика",
-    "0 бумажных салфеток",
-    "Весь день на велосипеде/самокате",
-    "Неделя без фастфуда",
-    "Раздельный сбор отходов всю неделю",
-    "Не использовать лифт всю неделю",
-    "Месяц без одноразового",
-    "Не печатать документы весь месяц",
-    "Сходить на субботник",
-    "Создать эко-мем"
-]
-
-@bot.message_handler(commands=['start'])
-def send_welcome(message):
-    bot.reply_to(message, "Привет! Я EcoBuddy, твой Телеграмм бот, мой функционал ты можешь посмотреть по команде /helpme")
+@bot.message_handler(commands=['quiz'])
+def start_quiz(message):
+    bot.send_message(message.chat.id, "🌍 Эко-викторина (5 вопросов):")
+    msg = bot.send_message(message.chat.id, quiz_questions[0])
+    bot.register_next_step_handler(msg, process_answer1)
 
 
+def process_answer1(message):
+    check_answer(message, 0, quiz_questions[1], process_answer2)
 
-@bot.message_handler(commands=["helpme"])
-def send_helpme(message):
-    help_text = """
-    🌿 *Что умеет EcoBuddy?* 🌿
+def process_answer2(message):
+    check_answer(message, 1, quiz_questions[2], process_answer3)
 
-    Вот мой функционал:
+def process_answer3(message):
+    check_answer(message, 2, quiz_questions[3], process_answer4)
 
-    *📌 Экосоветы*
-    - Каждый день даю полезные советы по экологичному образу жизни
-    - Как уменьшить свой углеродный след
-    - Альтернативы одноразовым вещам
+def process_answer4(message):
+    check_answer(message, 3, quiz_questions[4], process_answer5)
 
-    *🏆 Эко-челленджи*
-    - День без пластика
-    - Неделя без мусора
-    - Месяц с экосумкой
-    - И многие другие!
+def process_answer5(message):
+    if message.text.lower() == correct_answers[4].lower():
+        bot.send_message(message.chat.id, "✅ Верно!\n\nВикторина завершена!")
+    else:
+        bot.send_message(message.chat.id, f"❌ Неверно! Правильно: {correct_answers[4]}\n\nВикторина завершена!")
 
-    *😂 ЭкоМемы*
-    - Просто запроси мем командой /meme
-    - Смешные и мотивирующие картинки про экологию
 
-    *🔎 Полезные команды:*
-    /start - начать работу
-    /helpme - это меню
-    /tip - случайный экосовет
-    /challenge - получить челлендж
-    /meme - получить экологичный мем
-
-    Давай вместе сделаем планету чище! ♻️
-    """
-    bot.send_message(message.chat.id, help_text, parse_mode="Markdown")
+def check_answer(message, answer_index, next_question, next_handler):
+    if message.text.lower() == correct_answers[answer_index].lower():
+        bot.send_message(message.chat.id, "✅ Верно!")
+    else:
+        bot.send_message(message.chat.id, f"❌ Неверно! Правильно: {correct_answers[answer_index]}")
+    
+    msg = bot.send_message(message.chat.id, next_question)
+    bot.register_next_step_handler(msg, next_handler)
 
 
 
@@ -80,5 +47,53 @@ def send_random_challenge(message):
     challenges = random.choice(eco_challenge)
     bot.reply_to(message, f"♻️ *Твой экологический челлендж:*\n\n{challenges}", parse_mode="Markdown")
 
+
+@bot.message_handler(commands=['meme'])
+def send_meme(message):
+    # Генерируем случайное число от 1 до 8
+    meme_number = random.randint(1, 8)
+    meme_filename = f'экомемас для проекта_{meme_number}.jpg'  
+    try:
+        with open(meme_filename, 'rb') as photo:
+            bot.send_photo(message.chat.id, photo)
+    except FileNotFoundError:
+        bot.reply_to(message, "Извините, мем не найден. Попробуйте ещё раз.")
+
+
+
+@bot.message_handler(commands=['recycle'])
+@bot.message_handler(func=lambda msg: msg.text.lower().startswith('/recycle'))
+def handle_recycle(message):
+    try:
+        # Разбиваем текст на части
+        parts = message.text.split(maxsplit=1)
+        
+        # Если нет предмета - показываем список
+        if len(parts) < 2:
+            items_list = "\n".join([f"• {item}" for item in recycle_guide.keys()])
+            bot.send_message(message.chat.id, 
+                          "♻️ Введите предмет после команды:\n/recycle <предмет>\n\n"
+                          f"Доступные предметы:\n{items_list}")
+            return
+            
+        item = parts[1].lower().strip()
+        
+        # Ищем предмет в словаре
+        if item in recycle_guide:
+            response = f"♻️ {item.capitalize()}:\n\n{recycle_guide[item]}"
+        else:
+            response = f"❌ Предмет '{item}' не найден. Доступные варианты:\n"
+            response += "\n".join([f"• {key}" for key in recycle_guide.keys()])
+            
+        bot.send_message(message.chat.id, response)
+        
+    except Exception as e:
+        print(f"Ошибка: {e}")
+        bot.send_message(message.chat.id, "⚠️ Произошла ошибка. Попробуйте снова.")
+
+
+
+
+    
 
 bot.polling()
